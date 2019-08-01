@@ -53,7 +53,7 @@ T = 90*ppm
 R = 1-L-T
 c3 = Cavity(roc1=-inf_meter, roc2=-10*mm, pos1=0, d=5.0*mm, R1=R, R2=R, L1=L, L2=L, lamb=1042*nm, I0=1)
 #c3.report()
-
+"""
 p = BeamParameter(wavelen=1042*nm, z=0, w=c3.W0) # z=0 -> q at the waist
 print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
 p = FreeSpace(10*cm)*p # Apply a ray transfer matrix to the complex beam parameter p
@@ -63,7 +63,7 @@ p = FreeSpace(5*cm)*p
 print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um) # 5 cm after lens
 p = FreeSpace(5*cm)*p
 print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
-
+"""
 class BeamPlot:
     def __init__(self):
         pg.setConfigOptions(antialias=False)
@@ -79,7 +79,7 @@ class BeamPlot:
         bf_ylabels = [(0, '0'), (128, '128'), (255, '255')]
         bf_yaxis = pg.AxisItem(orientation='left')
         bf_yaxis.setTicks([bf_ylabels])
-
+        
         self.beam = self.win.addPlot(
             title='Beam', axisItems={'bottom': bf_xaxis, 'left': bf_yaxis}
         )
@@ -119,16 +119,52 @@ class BeamPlot:
         
         self.beam.showGrid(x=True, y=True)
         """
-
+        
     @staticmethod
     def start():
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
             QtGui.QApplication.instance().exec_()
-
-def EquiLens(R1,R2,d):
     
-    return 0
+    def EquLensSeq(self, R1, R2, d):
+        beam = BeamParameter(1042 * nm, 0, w=c3.W0)
+        z1, w1, beam = self.LensAndD(beam,R1/2,d,0)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+        
+        z2, w2, beam = self.LensAndD(beam,R2/2,d,d)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+        
+        z3, w3, beam = self.LensAndD(beam,R1/2,d,2*d)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+        
+        z4, w4, beam = self.LensAndD(beam,R2/2,d,3*d)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+        
+        z = z1+z2+z3+z4
+        w = w1+w2+w3+w4
+        
+        self.beam.plot(z1, w1)
+        self.beam.plot(z1, -w1)
+        
+        """
+        self.beam.plot(z1, w1)
+        self.beam.plot(z1, -w1)
+        self.beam.plot(z2, w2)
+        self.beam.plot(z2, -w2)
+        self.beam.plot(z3, w3)
+        self.beam.plot(z3, -w3)
+        self.beam.plot(z4, w4)
+        self.beam.plot(z4, -w4)
+        """
+        
+        
+    def LensAndD(self,beam,f,d,init):
+        z = np.linspace(init,init+d,1000)
+        beam = ThinLens(f)*FreeSpace(d)*beam
+        w = float(beam.w_0.n()) * np.sqrt(1 + ((z-init+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+        
+        return z, w, beam
 
 if __name__ == '__main__':
     app = BeamPlot()
+    app.EquLensSeq(50*cm, 50*cm, 50*cm)
     app.start()

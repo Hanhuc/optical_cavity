@@ -109,7 +109,8 @@ class Cavity:
             print("Please check the input variables...")
             return 0, 0, 0, 0
         return freq, self.intensity_i(freq), self.intensity_r(freq), self.intensity_t(freq)
-
+    
+        
     def report(self):
         print(c)
         print("======================================")

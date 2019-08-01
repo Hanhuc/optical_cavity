@@ -52,16 +52,17 @@ L = 10*ppm
 T = 90*ppm
 R = 1-L-T
 c3 = Cavity(roc1=-inf_meter, roc2=-10*mm, pos1=0, d=5.0*mm, R1=R, R2=R, L1=L, L2=L, lamb=1042*nm, I0=1)
-c3.report()
+#c3.report()
 
-p = BeamParameter(wavelen=1042*nm, z=0, w=c3.W0)
-print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um)
-p = FreeSpace(10*cm)*p
-print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um)
-p = ThinLens(10*cm)*p
+p = BeamParameter(wavelen=1042*nm, z=0, w=c3.W0) # z=0 -> q at the waist
+print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
+p = FreeSpace(10*cm)*p # Apply a ray transfer matrix to the complex beam parameter p
+print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
+p = ThinLens(10*cm)*p # Focal length 10 cm
 p = FreeSpace(5*cm)*p
-print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um)
-
+print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um) # 5 cm after lens
+p = FreeSpace(5*cm)*p
+print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
 
 class BeamPlot:
     def __init__(self):
@@ -71,20 +72,21 @@ class BeamPlot:
         self.win.setWindowTitle('Beam plotter')
         # self.win.setGeometry(5, 115, 1910, 1070)
 
-        bf_xlabels = [(0, '0'), (2048, '2048'), (4096, '4096')]
+        bf_xlabels = [(0, '0'), (0.5, '0.5'), (1, '1')]
         bf_xaxis = pg.AxisItem(orientation='bottom')
         bf_xaxis.setTicks([bf_xlabels])
 
-        bf_ylabels = [(0, '0'), (127, '128'), (255, '255')]
+        bf_ylabels = [(0, '0'), (128, '128'), (255, '255')]
         bf_yaxis = pg.AxisItem(orientation='left')
         bf_yaxis.setTicks([bf_ylabels])
 
         self.beam = self.win.addPlot(
             title='Beam', axisItems={'bottom': bf_xaxis, 'left': bf_yaxis}
         )
-        d1 = 20 * cm
-        f1 = 20 * cm
-        d2 = 40 * cm
+        """
+        d1 = 25 * cm
+        f1 = 25 * cm
+        d2 = 50 * cm
 
         beam = BeamParameter(1042 * nm, 0, w=c3.W0)
 
@@ -92,24 +94,40 @@ class BeamPlot:
 
 
         z1 = np.linspace(0, d1, 1000)
-        w = float(beam.w_0.n()) * np.sqrt(1 + (z1 / float(beam.z_r.n())) ** 2)
-        self.beam.plot(-z1, w)
-        self.beam.plot(-z1, -w)
-
-        beam = ThinLens(f1)*FreeSpace(d1)*beam
-        z2 = np.linspace(d1, d1+d2, 1000)
-        w = float(beam.w_0.n()) * np.sqrt(1 + ((z2-d1+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
-        self.beam.plot(-z2, w)
-        self.beam.plot(-z2, -w)
         print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
 
+        w = float(beam.w_0.n()) * np.sqrt(1 + ((z1-z1[0]) / float(beam.z_r.n())) ** 2)
+        self.beam.plot(z1, w)
+        self.beam.plot(z1, -w)
+
+        beam = ThinLens(f1)*FreeSpace(d1)*beam
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+
+        z2 = np.linspace(d1, d1+d2, 1000)
+        w = float(beam.w_0.n()) * np.sqrt(1 + ((z2-z2[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+        # Convert z2 into the position with respect to the waist
+        self.beam.plot(z2, w)
+        self.beam.plot(z2, -w)
+        
+        z3 = np.linspace(d1+d2, d1+d2+d2, 1000)
+        beam = ThinLens(f1)*FreeSpace(d2)*beam
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+                
+        w = float(beam.w_0.n()) * np.sqrt(1 + ((z3-z3[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+        self.beam.plot(z3, w)
+        self.beam.plot(z3, -w)
+        
         self.beam.showGrid(x=True, y=True)
+        """
 
     @staticmethod
     def start():
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
             QtGui.QApplication.instance().exec_()
 
+def EquiLens(R1,R2,d):
+    
+    return 0
 
 if __name__ == '__main__':
     app = BeamPlot()

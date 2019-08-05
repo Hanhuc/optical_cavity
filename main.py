@@ -1,4 +1,5 @@
 import numpy as np
+import sympy as sp
 import matplotlib.pyplot as plt
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
@@ -52,7 +53,7 @@ L = 10*ppm
 T = 90*ppm
 R = 1-L-T
 c3 = Cavity(roc1=-inf_meter, roc2=-10*mm, pos1=0, d=5.0*mm, R1=R, R2=R, L1=L, L2=L, lamb=1042*nm, I0=1)
-#c3.report()
+c3.report()
 """
 p = BeamParameter(wavelen=1042*nm, z=0, w=c3.W0) # z=0 -> q at the waist
 print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
@@ -64,6 +65,50 @@ print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um) # 5 
 p = FreeSpace(5*cm)*p
 print("q(z) = ", p.q.n(), ", w(z) = ", p.w.n()/um, ", w0 = ", p.w_0.n()/um)
 """
+R1 = 50*cm
+R2 = 50*cm
+d = 100*cm
+def FS(q,d):
+    return (q+d).n()
+def TL(q,f):
+    return (q/(-q/f + 1)).n()
+
+beam = BeamParameter(1042 * nm, 0, w=c3.W0)
+#q = FS(beam.q, d)
+q = TL(beam.q,R1/2)
+beam = BeamParameter(1042 * nm, sp.re(q), z_r=sp.im(q))
+z1 = np.linspace(0,d,1000)
+w1 = float(beam.w_0.n()) * np.sqrt(1 + ((z1-z1[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+print(beam)
+
+q = FS(beam.q, d)
+q = TL(q,R2/2)
+beam = BeamParameter(1042 * nm, sp.re(q), z_r=sp.im(q))
+z2 = np.linspace(d,2*d,1000)
+w2 = float(beam.w_0.n()) * np.sqrt(1 + ((z2-z2[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+print(beam)
+
+q = FS(beam.q, d)
+q = TL(q,R1/2)
+beam = BeamParameter(1042 * nm, sp.re(q), z_r=sp.im(q))
+z3 = np.linspace(2*d,3*d,1000)
+w3 = float(beam.w_0.n()) * np.sqrt(1 + ((z3-z3[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+print(beam)
+
+q = FS(beam.q, d)
+q = TL(q,R2/2)
+beam = BeamParameter(1042 * nm, sp.re(q), z_r=sp.im(q))
+z4 = np.linspace(3*d,4*d,1000)
+w4 = float(beam.w_0.n()) * np.sqrt(1 + ((z4-z4[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+print(beam)
+
+z = np.concatenate([z1,z2,z3,z4])
+w = np.concatenate([w1,w2,w3,w4])
+
 class BeamPlot:
     def __init__(self):
         pg.setConfigOptions(antialias=False)
@@ -72,7 +117,7 @@ class BeamPlot:
         self.win.setWindowTitle('Beam plotter')
         # self.win.setGeometry(5, 115, 1910, 1070)
 
-        bf_xlabels = [(0, '0'), (0.5, '0.5'), (1, '1')]
+        bf_xlabels = [(0, '0'), (0.5, '0.5'), (1, '1'), (1.5, '1.5'), (2, '2')]
         bf_xaxis = pg.AxisItem(orientation='bottom')
         bf_xaxis.setTicks([bf_xlabels])
 
@@ -119,52 +164,67 @@ class BeamPlot:
         
         self.beam.showGrid(x=True, y=True)
         """
+        self.beam.plot(z, w)
+        self.beam.plot(z, -w)
+        self.beam.showGrid(x=True, y=True)
+        
+        
         
     @staticmethod
     def start():
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
             QtGui.QApplication.instance().exec_()
+            
     
     def EquLensSeq(self, R1, R2, d):
-        beam = BeamParameter(1042 * nm, 0, w=c3.W0)
-        z1, w1, beam = self.LensAndD(beam,R1/2,d,0)
-        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
-        
-        z2, w2, beam = self.LensAndD(beam,R2/2,d,d)
-        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
-        
-        z3, w3, beam = self.LensAndD(beam,R1/2,d,2*d)
-        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+        beam0 = BeamParameter(1042 * nm, 0, w=c3.W0)
+        """
+        z1, w1, beam1 = self.LensAndD(beam0,R1/2,d,0)
+        print("q(z) = ", beam1.q.n()/cm, ", w(z) = ", beam1.w.n() / um)
+        z2, w2, beam2 = self.LensAndD(beam1,R2/2,d,d)
+        print("q(z) = ", beam2.q.n()/cm, ", w(z) = ", beam2.w.n() / um)
+        z3, w3, beam3 = self.LensAndD(beam2,R1/2,d,2*d)
+        print("q(z) = ", beam3.q.n()/cm, ", w(z) = ", beam3.w.n() / um)
         
         z4, w4, beam = self.LensAndD(beam,R2/2,d,3*d)
+        
+        z1 = np.linspace(0,d,1000)
+        beam = ThinLens(R1/2)*FreeSpace(d)*beam
+        w1 = float(beam.w_0.n()) * np.sqrt(1 + ((z1-z1[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
         print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
         
-        z = z1+z2+z3+z4
-        w = w1+w2+w3+w4
+        z2 = np.linspace(d,2*d,1000)
+        beam = ThinLens(R2/2)*FreeSpace(d)*beam
+        w2 = float(beam.w_0.n()) * np.sqrt(1 + ((z2-z2[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
         
-        self.beam.plot(z1, w1)
-        self.beam.plot(z1, -w1)
+        z3 = np.linspace(2*d,3*d,1000)
+        beam = ThinLens(R1/2)*FreeSpace(d)*beam
+        w3 = float(beam.w_0.n()) * np.sqrt(1 + ((z3-z3[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
         
+        z4 = np.linspace(3*d,4*d,1000)
+        beam = ThinLens(R2/2)*FreeSpace(d)*beam
+        w4 = float(beam.w_0.n()) * np.sqrt(1 + ((z4-z4[0]+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
+        print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
+        
+        z = np.concatenate([z1,z2,z3])
+        w = np.concatenate([w1,w2,w3])
         """
-        self.beam.plot(z1, w1)
-        self.beam.plot(z1, -w1)
-        self.beam.plot(z2, w2)
-        self.beam.plot(z2, -w2)
-        self.beam.plot(z3, w3)
-        self.beam.plot(z3, -w3)
-        self.beam.plot(z4, w4)
-        self.beam.plot(z4, -w4)
-        """
+        
+        self.beam.plot(z, w)
+        self.beam.plot(z, -w)
         
         
     def LensAndD(self,beam,f,d,init):
         z = np.linspace(init,init+d,1000)
+        
         beam = ThinLens(f)*FreeSpace(d)*beam
         w = float(beam.w_0.n()) * np.sqrt(1 + ((z-init+float(beam.z.n())) / float(beam.z_r.n())) ** 2)
-        
+        #print("q(z) = ", beam.q.n()/cm, ", w(z) = ", beam.w.n() / um)
         return z, w, beam
 
 if __name__ == '__main__':
     app = BeamPlot()
-    app.EquLensSeq(50*cm, 50*cm, 50*cm)
+    #app.EquLensSeq(50*cm, 50*cm, 50*cm)
     app.start()
